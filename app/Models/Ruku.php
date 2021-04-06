@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Verse extends Model
+class Ruku extends Model
 {
     use HasFactory;
 
@@ -23,13 +23,23 @@ class Verse extends Model
      */
     public $timestamps = false;
 
-    public function surah()
+    public function manzil()
+    {
+        return $this->belongsTo(Manzil::class);
+    }
+
+    public function Surah()
     {
         return $this->belongsTo(Surah::class);
     }
 
-    public function sajdas()
+    public function startVerse()
     {
-        return $this->hasMany(Sajda::class);
+        return $this->belongsTo(Verse::class, 'start_verse_id');
+    }
+
+    public function endVerse()
+    {
+        return $this->belongsTo(Verse::class, 'end_verse_id');
     }
 }

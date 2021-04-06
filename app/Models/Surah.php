@@ -28,13 +28,13 @@ class Surah extends Model
         return $this->hasMany(Verse::class);
     }
 
-    public function juzs()
-    {
-        return  $this->hasMany(Juz::class);
-    }
-
     public function sajdas()
     {
         return $this->hasMany(Sajda::class);
+    }
+
+    public function rukus()
+    {
+        return $this->hasMany(Ruku::class);
     }
 }
