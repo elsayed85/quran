@@ -15,6 +15,7 @@ use App\Notifications\Discord\RandomVerseNotification;
 use App\Notifications\Discord\WelcomeNotification;
 use Illuminate\Contracts\Pipeline\Hub;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('test', function () {
+    Artisan::call("key:generate");
+});
+
 Route::get('login/discord', function () {
     return Socialite::driver('discord')->redirect();
 })->middleware(['guest']);
@@ -37,21 +42,28 @@ Route::get('handel/discord', function (Request $request) {
         $channelId = app(Discord::class)->getPrivateChannel($userData->id);
         $password = null;
 
-        $user = User::UpdateOrCreate([
-            "email" => $userData->email,
-            'discord_user_id' => $userData->id
-        ], [
-            'discord_user_id' => $userData->id,
-            'discord_private_channel_id' => $channelId,
-            'email' => $userData->email,
-            'name' => $userData->name,
-            'avatar' => $userData->user['avatar'],
-            'password' => Hash::make($password = str_random(8)),
-            'email_verified_at' => $userData->user['verified'] ?  now() : null
-        ]);
-
-        if ($password)
+        if ($user = User::whereEmail($userData->email)->first()) {
+            $user->update([
+                'discord_user_id' => $userData->id,
+                'discord_private_channel_id' => $channelId,
+                'name' => $userData->name,
+                'avatar' => $userData->user['avatar'],
+                'email_verified_at' => $userData->user['verified'] ?  now() : null
+            ]);
+        } else {
+            $password = str_random(8);
+            $user = User::create([
+                'discord_user_id' => $userData->id,
+                'discord_private_channel_id' => $channelId,
+                'email' => $userData->email,
+                'name' => $userData->name,
+                'avatar' => $userData->user['avatar'],
+                'password' => Hash::make($password),
+                'email_verified_at' => $userData->user['verified'] ?  now() : null
+            ]);
             $user->notify(new WelcomeNotification($password));
+        }
+
         auth()->login($user);
         return redirect(route('dashboard'));
     } catch (\Throwable $th) {
