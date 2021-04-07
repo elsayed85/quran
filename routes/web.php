@@ -29,13 +29,13 @@ Route::get('/', function () {
 
 Route::get('login/discord', function () {
     return Socialite::driver('discord')->redirect();
-});
+})->middleware(['guest']);
 
 Route::get('handel/discord', function (Request $request) {
     try {
         $userData = Socialite::driver('discord')->user();
         $channelId = app(Discord::class)->getPrivateChannel($userData->id);
-        $password = str_random(8);
+        $password = null;
 
         $user = User::UpdateOrCreate([
             "email" => $userData->email,
@@ -46,24 +46,39 @@ Route::get('handel/discord', function (Request $request) {
             'email' => $userData->email,
             'name' => $userData->name,
             'avatar' => $userData->user['avatar'],
-            'password' => Hash::make($password),
+            'password' => Hash::make($password = str_random(8)),
             'email_verified_at' => $userData->user['verified'] ?  now() : null
         ]);
 
-        $user->notify(new WelcomeNotification($password));
-        dd('done!!');
+        if ($password)
+            $user->notify(new WelcomeNotification($password));
+        auth()->login($user);
+        return redirect(route('dashboard'));
     } catch (\Throwable $th) {
         dd($th->getMessage());
     }
-});
-
+})->middleware(['guest']);
 
 Route::get('send', function () {
-    $user = User::get()->map(function ($user) {
-        $user->notifyAt(new RandomVerseNotification(), now());
-        $user->notifyAt(new RandomPageNotification(), now());
-    });
-});
+    auth()->user()->notify(new RandomVerseNotification());
+    auth()->user()->notify(new RandomPageNotification());
+    return redirect(route('dashboard'))->withMessage('done!');
+})->middleware(['auth'])->name('send');
+
+
+
+
+Route::middleware(['auth:sanctum', 'verified'])->get('/dashboard', function () {
+    return view('dashboard');
+})->name('dashboard');
+
+// Route::get('white-background', function () {
+//     $files = glob(public_path("storage\quran_images\*.png"));
+//     foreach ($files as $file) {
+//         $image = Image::canvas(1024, 1656, '#fff')->insert($file)->save($file);
+//     }
+// });
+
 
 Route::get('seed', function () {
 
@@ -153,14 +168,3 @@ Route::get('seed', function () {
         ]);
     });
 });
-
-Route::get('white-background', function () {
-    $files = glob(public_path("storage\quran_images\*.png"));
-    foreach ($files as $file) {
-        $image = Image::canvas(1024,1656, '#fff')->insert($file)->save($file);
-    }
-});
-
-Route::middleware(['auth:sanctum', 'verified'])->get('/dashboard', function () {
-    return view('dashboard');
-})->name('dashboard');
