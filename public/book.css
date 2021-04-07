@@ -1,0 +1,24 @@
+
+@font-face {
+    font-family: 'amiri-regular';
+    src: url("/fonts/Amiri/Amiri-Regular.ttf") format('truetype');
+  }
+
+
+body {
+    color: #e5e5e5;
+    font: 16px/1.25 'amiri-regular', sans-serif;
+}
+
+#quran{
+    max-width: 40%;
+    min-height: 300px;
+    max-height: 893px;
+    overflow: auto;
+    font-size: 30px;
+}
+
+div#quran p {
+    line-height: 55px;
+    text-align: center;
+}

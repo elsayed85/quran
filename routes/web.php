@@ -1,5 +1,6 @@
 <?php
 
+use App\Bio\BlastAPI;
 use App\Models\Juz;
 use App\Models\Manzil;
 use App\Models\Page;
@@ -7,17 +8,64 @@ use App\Models\Rub;
 use App\Models\Ruku;
 use App\Models\Sajda;
 use App\Models\Surah;
+use App\Models\User;
 use App\Models\Verse;
+use App\Notifications\Discord\RandomPageNotification;
+use App\Notifications\Discord\RandomVerseNotification;
+use App\Notifications\Discord\WelcomeNotification;
+use Illuminate\Contracts\Pipeline\Hub;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Facades\Image;
+use Laravel\Socialite\Facades\Socialite;
+use NotificationChannels\Discord\Discord;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('login/discord', function () {
+    return Socialite::driver('discord')->redirect();
+});
 
-Route::get('start', function () {
+Route::get('handel/discord', function (Request $request) {
+    try {
+        $userData = Socialite::driver('discord')->user();
+        $channelId = app(Discord::class)->getPrivateChannel($userData->id);
+        $password = str_random(8);
+
+        $user = User::UpdateOrCreate([
+            "email" => $userData->email,
+            'discord_user_id' => $userData->id
+        ], [
+            'discord_user_id' => $userData->id,
+            'discord_private_channel_id' => $channelId,
+            'email' => $userData->email,
+            'name' => $userData->name,
+            'avatar' => $userData->user['avatar'],
+            'password' => Hash::make($password),
+            'email_verified_at' => $userData->user['verified'] ?  now() : null
+        ]);
+
+        $user->notify(new WelcomeNotification($password));
+        dd('done!!');
+    } catch (\Throwable $th) {
+        dd($th->getMessage());
+    }
+});
+
+
+Route::get('send', function () {
+    $user = User::get()->map(function ($user) {
+        $user->notifyAt(new RandomVerseNotification(), now());
+        $user->notifyAt(new RandomPageNotification(), now());
+    });
+});
+
+Route::get('seed', function () {
 
     // surahs
     $surahsModels = collect(json_decode(Storage::get("public/metadata/surah.json")))->map(function ($sura) {
@@ -105,3 +153,14 @@ Route::get('start', function () {
         ]);
     });
 });
+
+Route::get('white-background', function () {
+    $files = glob(public_path("storage\quran_images\*.png"));
+    foreach ($files as $file) {
+        $image = Image::canvas(1024,1656, '#fff')->insert($file)->save($file);
+    }
+});
+
+Route::middleware(['auth:sanctum', 'verified'])->get('/dashboard', function () {
+    return view('dashboard');
+})->name('dashboard');

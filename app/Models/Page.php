@@ -50,6 +50,11 @@ class Page extends Model
         return $this->belongsTo(Verse::class, 'end_verse_id');
     }
 
+    public function verses()
+    {
+        return Verse::where("id", ">=", $this->start_verse_id)->where("id", "<=", $this->end_verse_id);
+    }
+
     public function getImageAttribute()
     {
         return asset("storage/quran_images/{$this->id}.png");

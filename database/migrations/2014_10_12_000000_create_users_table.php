@@ -20,6 +20,11 @@ class CreateUsersTable extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
+            $table->foreignId('current_team_id')->nullable();
+            $table->text('profile_photo_path')->nullable();
+            $table->string('discord_user_id')->nullable();
+            $table->string('discord_private_channel_id')->nullable();
+            $table->string('avatar')->nullable();
             $table->timestamps();
         });
     }
